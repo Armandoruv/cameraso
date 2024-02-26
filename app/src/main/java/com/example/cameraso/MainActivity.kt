@@ -2,17 +2,18 @@ package com.example.cameraso
 
 
 import android.annotation.SuppressLint
+import android.content.ContentValues
 import android.content.DialogInterface
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.Environment
+import android.provider.MediaStore
 import android.widget.Toast
 import androidx.camera.core.AspectRatio
-import androidx.camera.core.Camera
+import androidx.camera.core.*
 import androidx.camera.core.CameraSelector
-import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCapture.OutputFileOptions
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
@@ -249,7 +250,30 @@ class MainActivity : AppCompatActivity() {
         val fileName = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
             .format(System.currentTimeMillis()) + ".jpg"
         val imageFile = File(imageFolder,fileName)
-        val outputOption = OutputFileOptions.Builder(imageFile).build()
+
+        val contentValues = ContentValues().apply {
+            put(MediaStore.Images.Media.DISPLAY_NAME,fileName)
+            put(MediaStore.Images.Media.MIME_TYPE,"image/jpeg")
+            if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P){
+                put(MediaStore.Images.Media.RELATIVE_PATH,"Pictures/Images")
+            }
+        }
+
+        val metadata = ImageCapture.Metadata().apply {
+            isReversedHorizontal = (lensFacing == CameraSelector.LENS_FACING_FRONT)
+        }
+        val outputOption =
+            if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
+                OutputFileOptions.Builder(
+                    contentResolver,
+                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                    contentValues
+                ).setMetadata(metadata).build()
+            }else{
+                val imageFile = File(imageFolder, fileName)
+                OutputFileOptions.Builder(imageFile)
+                    .setMetadata(metadata).build()
+            }
 
         imageCapture.takePicture(
             outputOption,
